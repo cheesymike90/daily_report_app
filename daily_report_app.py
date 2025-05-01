@@ -1,78 +1,45 @@
-import streamlit as st
 import pandas as pd
-import os
-from datetime import datetime
+import streamlit as st
+import io
 
-# File path for data storage
-CSV_FILE = "daily_reports.csv"
+def generate_daily_report(file):
+    df = pd.read_csv(file)
+    df.columns = df.columns.str.strip().str.replace('\r', '')
 
-# Load existing data or create empty DataFrame
-def load_data():
-    if os.path.exists(CSV_FILE):
-        return pd.read_csv(CSV_FILE, parse_dates=['Ship Date'])
-    else:
-        return pd.DataFrame(columns=[
-            "Date", "PRO#", "Customer", "Ship Date", "Gross Rate",
-            "30% of Gross", "70% of Gross", "Gross Profit", "Actual Dispatch",
-            "Sales Rep", "30% of Profit", "70% of Profit"
-        ])
+    df['30% of Gross Rate'] = df['Gross Rate'] * 0.30
+    df['70% of Gross Rate'] = df['Gross Rate'] * 0.70
+    df['30% of Profit'] = df['Gross Profit'] * 0.30
+    df['70% of Profit'] = df['Gross Profit'] * 0.70
 
-# Save a new report row
-def save_report(data):
-    df = load_data()
-    df = pd.concat([df, pd.DataFrame([data])], ignore_index=True)
-    df.to_csv(CSV_FILE, index=False)
+    report_df = df[[
+        'Pro #', 'Customer', 'Ship Date', 'Gross Rate',
+        '30% of Gross Rate', '70% of Gross Rate', 'Gross Profit',
+        'Actual Dispatcher', 'Salesrep', '30% of Profit', '70% of Profit'
+    ]].rename(columns={'Actual Dispatcher': 'Actual Dispatch'})
 
-# App UI
-st.title("📦 Daily Freight Report")
-st.subheader("Enter Daily Report")
+    return report_df
 
-with st.form("report_form"):
-    pro = st.text_input("PRO#")
-    customer = st.text_input("Customer")
-    ship_date = st.date_input("Ship Date")
-    gross_rate = st.number_input("Gross Rate", min_value=0.0)
-    gross_profit = st.number_input("Gross Profit", min_value=0.0)
-    actual_dispatch = st.text_input("Actual Dispatch")
-    sales_rep = st.text_input("Sales Rep")
+# Streamlit Interface
+st.set_page_config(page_title="Daily Report Generator", layout="centered")
 
-    submitted = st.form_submit_button("Save Report")
-    if submitted:
-        report = {
-            "Date": datetime.now().date(),
-            "PRO#": pro,
-            "Customer": customer,
-            "Ship Date": pd.to_datetime(ship_date),
-            "Gross Rate": gross_rate,
-            "30% of Gross": 0.3 * gross_rate,
-            "70% of Gross": 0.7 * gross_rate,
-            "Gross Profit": gross_profit,
-            "Actual Dispatch": actual_dispatch,
-            "Sales Rep": sales_rep,
-            "30% of Profit": 0.3 * gross_profit,
-            "70% of Profit": 0.7 * gross_profit
-        }
-        save_report(report)
-        st.success("Report saved successfully.")
+st.title("📦 Daily Profitability Report")
+st.write("Upload your daily shipment CSV file by dragging and dropping it below:")
 
-# Load and display data
-data = load_data()
-st.subheader("📊 All Daily Reports")
-st.dataframe(data)
+uploaded_file = st.file_uploader("Drop CSV here or click to browse", type=["csv"], label_visibility="collapsed")
 
-# Summary filters
-st.sidebar.header("Summary Filters")
-summary_type = st.sidebar.selectbox("View Summary By", ["Week", "Month", "Year"])
+if uploaded_file is not None:
+    st.success("✅ File uploaded successfully.")
+    report = generate_daily_report(uploaded_file)
+    
+    st.subheader("📊 Generated Report")
+    st.dataframe(report, use_container_width=True)
 
-if not data.empty:
-    data["Ship Date"] = pd.to_datetime(data["Ship Date"])
-    data["Week"] = data["Ship Date"].dt.strftime('%Y-W%U')
-    data["Month"] = data["Ship Date"].dt.strftime('%Y-%m')
-    data["Year"] = data["Ship Date"].dt.year
-
-    group_field = summary_type
-    summary = data.groupby(group_field)[["Gross Rate", "Gross Profit"]].sum().reset_index()
-    st.subheader(f"📅 {summary_type}ly Summary")
-    st.dataframe(summary)
+    csv = report.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="⬇️ Download CSV Report",
+        data=csv,
+        file_name='daily_report_output.csv',
+        mime='text/csv'
+    )
 else:
-    st.warning("No data available to summarize.")
+    st.info("Awaiting CSV file upload...")
