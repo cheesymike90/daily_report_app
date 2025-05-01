@@ -58,8 +58,8 @@ if uploaded_file:
     combined_df["Ship Date"] = pd.to_datetime(combined_df["Ship Date"])
 
     # Sidebar filters
-    st.sidebar.header("Filter by Profit")
-    include_negatives = st.sidebar.checkbox("Include negative profits", value=True)
+    st.sidebar.header("Dispatcher & Sales Rep Filter")
+    include_negatives_sr = st.sidebar.checkbox("Include negative profits for dispatchers and sales reps", value=True)
 
     if not include_negatives:
         combined_df = combined_df[combined_df["Gross Profit"] >= 0]
@@ -90,8 +90,13 @@ if uploaded_file:
         summary_df = filtered_df.copy()
 
     # Create summaries
-    dispatcher_summary = filtered_df.groupby("Actual Dispatch", as_index=False)["30% of Profit"].sum()
-    salesrep_summary = filtered_df.groupby("Sales Rep", as_index=False)["70% of Profit"].sum()
+    if not include_negatives_sr:
+        filtered_summary_df = filtered_df[filtered_df["Gross Profit"] >= 0]
+    else:
+        filtered_summary_df = filtered_df
+
+    dispatcher_summary = filtered_summary_df.groupby("Actual Dispatch", as_index=False)["30% of Profit"].sum()["30% of Profit"].sum()
+    salesrep_summary = filtered_summary_df.groupby("Sales Rep", as_index=False)["70% of Profit"].sum()
     customer_summary = filtered_df.groupby("Customer", as_index=False)["Gross Profit"].sum()
     lane_summary = filtered_df.groupby("Lane", as_index=False).agg({"Gross Profit": "sum", "PRO#": "count"}).rename(columns={"PRO#": "Shipment Count"})
 
