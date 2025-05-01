@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import io
 import os
-import plotly.express as px
 
 st.set_page_config(page_title="Freight Report Generator", layout="wide")
 st.title("📦 Freight Report Generator")
@@ -97,24 +96,18 @@ if uploaded_file:
 
     st.subheader("Updated Dispatcher Profit Summary (30%)")
     st.dataframe(dispatcher_summary)
-    st.plotly_chart(px.bar(dispatcher_summary, x="Actual Dispatch", y="30% of Profit", title="Dispatcher Profit"))
 
     st.subheader("Updated Sales Rep Profit Summary (70%)")
     st.dataframe(salesrep_summary)
-    st.plotly_chart(px.bar(salesrep_summary, x="Sales Rep", y="70% of Profit", title="Sales Rep Profit"))
 
     st.subheader("Gross Profit by Customer")
     st.dataframe(customer_summary)
-    st.plotly_chart(px.bar(customer_summary, x="Customer", y="Gross Profit", title="Customer Gross Profit"))
 
     st.subheader("Gross Profit and Shipment Count by Lane")
     st.dataframe(lane_summary)
-    st.plotly_chart(px.bar(lane_summary, x="Lane", y="Gross Profit", title="Gross Profit by Lane"))
 
     st.subheader(f"Gross Profit by {period} Period")
     st.dataframe(summary_df)
-    if period != "All":
-        st.plotly_chart(px.bar(summary_df, x=summary_df.columns[0], y="Gross Profit", title=f"Gross Profit by {period}"))
 
     # Excel download
     output = io.BytesIO()
