@@ -1,59 +1,66 @@
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import io
 
-def generate_daily_report(file):
-    df = pd.read_csv(file)
-    df.columns = df.columns.str.strip().str.replace('\r', '')
+st.set_page_config(page_title="Freight Report Generator", layout="wide")
+st.title("📦 Freight Report Generator")
+st.write("Upload a CSV file to generate a pivot report and profit summaries for dispatchers and sales reps.")
 
-    df['30% of Gross Rate'] = df['Gross Rate'] * 0.30
-    df['70% of Gross Rate'] = df['Gross Rate'] * 0.70
-    df['30% of Profit'] = df['Gross Profit'] * 0.30
-    df['70% of Profit'] = df['Gross Profit'] * 0.70
+uploaded_file = st.file_uploader("Choose your CSV file", type="csv")
 
-    df = df.rename(columns={'Actual Dispatcher': 'Actual Dispatch'})
-    return df
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    df.columns = df.columns.str.strip().str.replace('\r', '', regex=True)
 
-def pivot_by_dispatch(df):
-    return df.groupby('Actual Dispatch')[[
-        '30% of Gross Rate', '30% of Profit'
-    ]].sum().reset_index()
+    # Filter positive gross profit only
+    df = df[df["Gross Profit"] >= 0].copy()
 
-def pivot_by_salesrep(df):
-    return df.groupby('Salesrep')[[
-        '70% of Gross Rate', '70% of Profit'
-    ]].sum().reset_index()
+    # Calculate Gross Rate splits
+    df["30% of Gross Rate"] = df["Gross Rate"] * 0.30
+    df["70% of Gross Rate"] = df["Gross Rate"] * 0.70
 
-# Streamlit Interface
-st.set_page_config(page_title="Daily Report Generator", layout="centered")
-st.title("📦 Daily Profitability Report")
-st.write("Upload your daily shipment CSV file by dragging and dropping it below:")
+    # Rename for consistency
+    df.rename(columns={
+        "Pro #": "PRO#",
+        "Customer": "Customer",
+        "Ship Date": "Ship Date",
+        "Gross Rate": "Gross Rate",
+        "Gross Profit": "Gross Profit",
+        "Actual Dispatcher": "Actual Dispatch",
+        "Salesrep": "Sales Rep",
+        "30% Profit": "30% of Profit",
+        "70% Profit": "70% of Profit"
+    }, inplace=True)
 
-uploaded_file = st.file_uploader("Drop CSV here or click to browse", type=["csv"], label_visibility="collapsed")
+    pivot_df = df[[
+        "PRO#", "Customer", "Ship Date", "Gross Rate",
+        "30% of Gross Rate", "70% of Gross Rate", "Gross Profit",
+        "Actual Dispatch", "Sales Rep", "30% of Profit", "70% of Profit"
+    ]]
 
-if uploaded_file is not None:
-    st.success("✅ File uploaded successfully.")
-    df = generate_daily_report(uploaded_file)
+    dispatcher_summary = pivot_df.groupby("Actual Dispatch", as_index=False)["30% of Profit"].sum()
+    salesrep_summary = pivot_df.groupby("Sales Rep", as_index=False)["70% of Profit"].sum()
 
-    st.subheader("📋 Pivot Table by Actual Dispatch (30% Split)")
-    dispatch_pivot = pivot_by_dispatch(df)
-    st.dataframe(dispatch_pivot, use_container_width=True)
+    # Show data previews
+    st.subheader("Pivot Table by PRO#")
+    st.dataframe(pivot_df)
 
-    st.subheader("📋 Pivot Table by Salesrep (70% Split)")
-    salesrep_pivot = pivot_by_salesrep(df)
-    st.dataframe(salesrep_pivot, use_container_width=True)
+    st.subheader("Dispatcher Profit Summary (30%)")
+    st.dataframe(dispatcher_summary)
 
-    # Excel export
-    with pd.ExcelWriter("pivot_report.xlsx", engine="xlsxwriter") as writer:
-        dispatch_pivot.to_excel(writer, sheet_name="By Dispatcher", index=False)
-        salesrep_pivot.to_excel(writer, sheet_name="By Salesrep", index=False)
-        writer.save()
-        with open("pivot_report.xlsx", "rb") as f:
-            st.download_button(
-                label="⬇️ Download Excel Report",
-                data=f,
-                file_name="daily_pivot_report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-else:
-    st.info("Awaiting CSV file upload...")
+    st.subheader("Sales Rep Profit Summary (70%)")
+    st.dataframe(salesrep_summary)
 
+    # Excel download
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        pivot_df.to_excel(writer, sheet_name="Pivot by PRO#", index=False)
+        dispatcher_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=0, index=False)
+        salesrep_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + 2, index=False)
+    
+    st.download_button(
+        label="📥 Download Excel Report",
+        data=output.getvalue(),
+        file_name="freight_report.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
