@@ -96,11 +96,10 @@ if uploaded_file:
     lane_summary = filtered_df.groupby("Lane", as_index=False).agg({"Gross Profit": "sum", "PRO#": "count"}).rename(columns={"PRO#": "Shipment Count"})
 
     # Show data
-    negative_profits_df = pivot_df[pivot_df["Gross Profit"] < 0]
+    negative_profits_df = combined_df[combined_df["Gross Profit"] < 0]
     st.subheader("🚩 Negative Profit Entries")
     st.dataframe(negative_profits_df)
-    st.subheader("Today's Pivot Table by PRO#")
-    st.dataframe(pivot_df)
+    
 
     st.subheader("Updated Dispatcher Profit Summary (30%)")
     st.dataframe(dispatcher_summary)
