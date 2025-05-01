@@ -141,10 +141,11 @@ if uploaded_file:
     monthly_avg["Profit Margin %"] = (monthly_avg["Gross Profit"] / monthly_avg["Gross Rate"]) * 100
     monthly_avg_summary = monthly_avg.mean(numeric_only=True)
 
-negative_profits_df = combined_df[combined_df["Gross Profit"] < 0]
+if uploaded_file:
+    negative_profits_df = combined_df[combined_df["Gross Profit"] < 0]
 
-# Show data
-    st.subheader("🚩 Negative Profit Entries")
+    # Show data
+    st.markdown("### 🚩 Negative Profit Entries")
     st.dataframe(negative_profits_df)
     st.subheader("📊 Company-Wide Totals")
     st.dataframe(company_totals.to_frame().T)
@@ -180,7 +181,7 @@ negative_profits_df = combined_df[combined_df["Gross Profit"] < 0]
         dispatcher_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=0, index=False)
         salesrep_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + 2, index=False)
         customer_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + len(salesrep_summary) + 4, index=False)
-                negative_profits_df.to_excel(writer, sheet_name="Negative Profits", index=False)
+        negative_profits_df.to_excel(writer, sheet_name="Negative Profits", index=False)
         if period != "All":
             summary_df.to_excel(writer, sheet_name=f"{period} Summary", index=False)
 
