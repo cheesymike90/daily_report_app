@@ -96,6 +96,9 @@ if uploaded_file:
     lane_summary = filtered_df.groupby("Lane", as_index=False).agg({"Gross Profit": "sum", "PRO#": "count"}).rename(columns={"PRO#": "Shipment Count"})
 
     # Show data
+    negative_profits_df = pivot_df[pivot_df["Gross Profit"] < 0]
+    st.subheader("🚩 Negative Profit Entries")
+    st.dataframe(negative_profits_df)
     st.subheader("Today's Pivot Table by PRO#")
     st.dataframe(pivot_df)
 
@@ -117,15 +120,18 @@ if uploaded_file:
     # Excel download
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        # Always write the full pivot_df (including negatives) to Excel
         pivot_df.to_excel(writer, sheet_name="Pivot by PRO#", index=False)
+        # Use filtered summaries based on sidebar filters
         dispatcher_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=0, index=False)
         salesrep_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + 2, index=False)
         customer_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + len(salesrep_summary) + 4, index=False)
         lane_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + len(salesrep_summary) + len(customer_summary) + 6, index=False)
+        negative_profits_df.to_excel(writer, sheet_name="Negative Profits", index=False)
         if period != "All":
             summary_df.to_excel(writer, sheet_name=f"{period} Summary", index=False)
 
-    st.download_button(
+    st.download_button((
         label="📥 Download Excel Report",
         data=output.getvalue(),
         file_name="freight_report.xlsx",
