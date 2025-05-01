@@ -61,7 +61,8 @@ if uploaded_file:
     st.sidebar.header("Dispatcher & Sales Rep Filter")
     include_negatives_sr = st.sidebar.checkbox("Include negative profits for dispatchers and sales reps", value=True)
 
-    if not include_negatives:
+    # FIX: use correct variable name from checkbox
+    if not include_negatives_sr:
         combined_df = combined_df[combined_df["Gross Profit"] >= 0]
     st.sidebar.header("Filter by Time Period")
     period = st.sidebar.selectbox("Select Period", ["All", "Weekly", "Monthly", "Yearly"])
@@ -140,7 +141,11 @@ if uploaded_file:
     monthly_avg["Profit Margin %"] = (monthly_avg["Gross Profit"] / monthly_avg["Gross Rate"]) * 100
     monthly_avg_summary = monthly_avg.mean(numeric_only=True)
 
+negative_profits_df = combined_df[combined_df["Gross Profit"] < 0]
+
 # Show data
+    st.subheader("🚩 Negative Profit Entries")
+    st.dataframe(negative_profits_df)
     st.subheader("📊 Company-Wide Totals")
     st.dataframe(company_totals.to_frame().T)
 
@@ -175,8 +180,7 @@ if uploaded_file:
         dispatcher_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=0, index=False)
         salesrep_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + 2, index=False)
         customer_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + len(salesrep_summary) + 4, index=False)
-        lane_summary.to_excel(writer, sheet_name="Profit Summaries", startrow=len(dispatcher_summary) + len(salesrep_summary) + len(customer_summary) + 6, index=False)
-        negative_profits_df.to_excel(writer, sheet_name="Negative Profits", index=False)
+                negative_profits_df.to_excel(writer, sheet_name="Negative Profits", index=False)
         if period != "All":
             summary_df.to_excel(writer, sheet_name=f"{period} Summary", index=False)
 
