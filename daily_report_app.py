@@ -95,31 +95,78 @@ if uploaded_file:
     else:
         filtered_summary_df = filtered_df
 
-    dispatcher_summary = filtered_summary_df.groupby("Actual Dispatch", as_index=False)["30% of Profit"].sum()["30% of Profit"].sum()
-    salesrep_summary = filtered_summary_df.groupby("Sales Rep", as_index=False)["70% of Profit"].sum()
-    customer_summary = filtered_df.groupby("Customer", as_index=False)["Gross Profit"].sum()
-    lane_summary = filtered_df.groupby("Lane", as_index=False).agg({"Gross Profit": "sum", "PRO#": "count"}).rename(columns={"PRO#": "Shipment Count"})
+    # Company-wide metrics
+    company_totals = combined_df.agg({
+        "Gross Rate": "sum",
+        "Gross Profit": "sum"
+    })
+    company_totals["Total Cost"] = company_totals["Gross Rate"] - company_totals["Gross Profit"]
+    company_totals["Profit Margin %"] = (company_totals["Gross Profit"] / company_totals["Gross Rate"]) * 100
 
-    # Show data
-    negative_profits_df = combined_df[combined_df["Gross Profit"] < 0]
-    st.subheader("🚩 Negative Profit Entries")
-    st.dataframe(negative_profits_df)
-    
+    # Dispatcher and Sales Rep summaries
+    dispatcher_summary = filtered_summary_df.groupby("Actual Dispatch", as_index=False)["30% of Profit"].sum()
+    salesrep_summary = filtered_summary_df.groupby("Sales Rep", as_index=False)["70% of Profit"].sum()
+
+    # Customer metrics
+    customer_summary = filtered_df.groupby("Customer").agg({
+        "Gross Rate": "sum",
+        "Gross Profit": "sum"
+    }).reset_index()
+    customer_summary["Total Cost"] = customer_summary["Gross Rate"] - customer_summary["Gross Profit"]
+    customer_summary["Profit Margin %"] = (customer_summary["Gross Profit"] / customer_summary["Gross Rate"]) * 100
+
+    # Averages
+    daily_avg = combined_df.groupby(combined_df["Ship Date"]).agg({
+        "Gross Rate": "sum",
+        "Gross Profit": "sum"
+    }).reset_index()
+    daily_avg["Total Cost"] = daily_avg["Gross Rate"] - daily_avg["Gross Profit"]
+    daily_avg["Profit Margin %"] = (daily_avg["Gross Profit"] / daily_avg["Gross Rate"]) * 100
+    daily_avg_summary = daily_avg.mean(numeric_only=True)
+
+    weekly_avg = combined_df.groupby(combined_df["Ship Date"].dt.to_period("W")).agg({
+        "Gross Rate": "sum",
+        "Gross Profit": "sum"
+    }).reset_index()
+    weekly_avg["Total Cost"] = weekly_avg["Gross Rate"] - weekly_avg["Gross Profit"]
+    weekly_avg["Profit Margin %"] = (weekly_avg["Gross Profit"] / weekly_avg["Gross Rate"]) * 100
+    weekly_avg_summary = weekly_avg.mean(numeric_only=True)
+
+    monthly_avg = combined_df.groupby(combined_df["Ship Date"].dt.to_period("M")).agg({
+        "Gross Rate": "sum",
+        "Gross Profit": "sum"
+    }).reset_index()
+    monthly_avg["Total Cost"] = monthly_avg["Gross Rate"] - monthly_avg["Gross Profit"]
+    monthly_avg["Profit Margin %"] = (monthly_avg["Gross Profit"] / monthly_avg["Gross Rate"]) * 100
+    monthly_avg_summary = monthly_avg.mean(numeric_only=True)
+
+# Show data
+    st.subheader("📊 Company-Wide Totals")
+    st.dataframe(company_totals.to_frame().T)
 
     st.subheader("Updated Dispatcher Profit Summary (30%)")
+    st.dataframe(dispatcher_summary)
+ (30%)")
     st.dataframe(dispatcher_summary)
 
     st.subheader("Updated Sales Rep Profit Summary (70%)")
     st.dataframe(salesrep_summary)
 
-    st.subheader("Gross Profit by Customer")
+    st.subheader("Gross Revenue, Cost, and Profit by Customer")
     st.dataframe(customer_summary)
 
-    st.subheader("Gross Profit and Shipment Count by Lane")
-    st.dataframe(lane_summary)
-
+    
     st.subheader(f"Gross Profit by {period} Period")
     st.dataframe(summary_df)
+
+    st.subheader("📈 Average Daily Totals")
+    st.dataframe(daily_avg_summary.to_frame().T)
+
+    st.subheader("📈 Average Weekly Totals")
+    st.dataframe(weekly_avg_summary.to_frame().T)
+
+    st.subheader("📈 Average Monthly Totals")
+    st.dataframe(monthly_avg_summary.to_frame().T)
 
     # Excel download
     output = io.BytesIO()
