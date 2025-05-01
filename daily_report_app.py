@@ -130,7 +130,7 @@ if uploaded_file:
         if period != "All":
             summary_df.to_excel(writer, sheet_name=f"{period} Summary", index=False)
 
-    st.download_button((
+    st.download_button(
         label="📥 Download Excel Report",
         data=output.getvalue(),
         file_name="freight_report.xlsx",
