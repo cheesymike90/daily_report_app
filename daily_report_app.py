@@ -15,8 +15,8 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
     df.columns = df.columns.str.strip().str.replace('\r', '', regex=True)
 
-    # Filter positive gross profit only
-    df = df[df["Gross Profit"] >= 0].copy()
+    # Include all profit values, including negative
+    df = df.copy()
 
     # Calculate Gross Rate splits
     df["30% of Gross Rate"] = df["Gross Rate"] * 0.30
@@ -58,6 +58,11 @@ if uploaded_file:
     combined_df["Ship Date"] = pd.to_datetime(combined_df["Ship Date"])
 
     # Sidebar filters
+    st.sidebar.header("Filter by Profit")
+    include_negatives = st.sidebar.checkbox("Include negative profits", value=True)
+
+    if not include_negatives:
+        combined_df = combined_df[combined_df["Gross Profit"] >= 0]
     st.sidebar.header("Filter by Time Period")
     period = st.sidebar.selectbox("Select Period", ["All", "Weekly", "Monthly", "Yearly"])
 
