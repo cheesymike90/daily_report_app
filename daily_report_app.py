@@ -146,8 +146,6 @@ if uploaded_file:
 
     st.subheader("Updated Dispatcher Profit Summary (30%)")
     st.dataframe(dispatcher_summary)
- (30%)")
-    st.dataframe(dispatcher_summary)
 
     st.subheader("Updated Sales Rep Profit Summary (70%)")
     st.dataframe(salesrep_summary)
